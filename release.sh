@@ -1,32 +1,26 @@
 #!/bin/bash
-# From everything I have found it doesn't look like you can do a bazel build with
-# multiple different platforms in one invocation. If that changes we can remove
-# this but for now to cut a release you can just run this script.
+# Builds release binaries for every supported platform. Keep the platform
+# list and build flags in sync with .github/workflows/build.yml and
+# release-assets.yml, which produce the same artifacts in CI.
+set -euo pipefail
 
-# gopkg.in/src-d/go-git.v4 v4.8.1 doesn't build on solaris_amd64 
-builds=(
-"openbsd_amd64"
-"netbsd_amd64"
-"linux_amd64"
-"linux_arm64"
-"freebsd_amd64"
-"darwin_amd64")
+platforms=(
+  "linux amd64"
+  "linux arm64"
+  "darwin amd64"
+  "darwin arm64"
+  "freebsd amd64"
+  "openbsd amd64"
+  "netbsd amd64"
+)
 
 releases="release/$(git describe --tags)"
-mkdir -p ${releases}
+mkdir -p "${releases}"
 
-for arch in "${builds[@]}"; do
-  echo build for $arch
-  echo ===========================================================================
-
-  bazel build \
-    --@io_bazel_rules_go//go/config:static \
-    --platform_suffix=_$arch \
-    --platforms=@io_bazel_rules_go//go/toolchain:$arch \
-    //cmd/arc:arc
-
-  # Not sure how to fix but bazel decided to change this path to something stupid instead of providing
-  # an easy way to find builds for different platforms.
-  cp -f $(pwd)/bazel-bin/cmd/arc/arc_/arc $(pwd)/${releases}/arc_$arch
+for platform in "${platforms[@]}"; do
+  read -r goos goarch <<< "${platform}"
+  out="${releases}/arc_${goos}_${goarch}"
+  echo "building ${out}"
+  CGO_ENABLED=0 GOOS="${goos}" GOARCH="${goarch}" \
+    go build -trimpath -ldflags "-s -w" -o "${out}" ./cmd/arc
 done
-
