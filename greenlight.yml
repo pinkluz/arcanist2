@@ -1,0 +1,43 @@
+environments:
+  - name: beta
+    auto_promote: true
+  - name: dev
+    flows_after: beta
+  - name: staging
+    flows_after: dev
+  - name: prod
+    flows_after: staging
+
+pipeline:
+  beta:
+    - lane: main
+      steps:
+        - name: deploy
+          run: test.yml
+        - approval: approval
+          instructions: Verify some thing
+    - lane: main2
+      needs: [main, main3]
+      steps:
+        - name: other
+          run: security.yml
+        - name: thing
+          run: security.yml
+    - lane: main3
+      steps:
+        - name: one
+          run: build.yml
+        - name: two
+          run: build.yml
+        - name: three
+          run: build.yml
+  dev:
+    - lane: main
+      steps:
+        - name: test
+          run: security.yml
+  staging:
+    - lane: main
+      steps:
+        - name: deploy
+          run: security.yml
