@@ -41,3 +41,5 @@ pipeline:
       steps:
         - name: deploy
           run: security.yml
+        - approval: staging signoff
+          instructions: Confirm staging looks healthy before prod.
